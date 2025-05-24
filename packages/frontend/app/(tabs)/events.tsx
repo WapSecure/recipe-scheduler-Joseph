@@ -6,11 +6,11 @@ import { useEvents } from '@/services/events';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { RectButton } from 'react-native-gesture-handler';
 import { FAB } from '@/components/FAB';
-import { useEffect, useState } from 'react';
 import { Loading } from '@/components/Loading';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { ErrorHandler } from '@/components/ErrorHandler';
 
 type RootStackParamList = {
   'events/new': undefined;
@@ -20,8 +20,7 @@ type RootStackParamList = {
 
 export default function EventsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { events, deleteEvent } = useEvents();
-  const [isLoading, setIsLoading] = useState(true);
+  const { events, loading, error, deleteEvent } = useEvents();
 
   const renderRightActions = (id: string) => (
     <RectButton
@@ -37,12 +36,7 @@ export default function EventsScreen() {
     </RectButton>
   );
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (isLoading) return <Loading />;
+  if (loading) return <Loading />;
 
   return (
     <>
@@ -53,6 +47,7 @@ export default function EventsScreen() {
         }} 
       />
       <View style={styles.container}>
+        <ErrorHandler error={error} />
         <FlatList
           ListEmptyComponent={<Text style={styles.emptyText}>No events scheduled yet</Text>}
           data={events}
@@ -62,7 +57,9 @@ export default function EventsScreen() {
               <Link href={`/events/${item.id}`} asChild>
                 <Pressable style={styles.eventItem}>
                   <Text style={styles.eventTitle}>{item.title}</Text>
-                  <Text style={styles.eventTime}>{new Date(item.eventTime).toLocaleString()}</Text>
+                  <Text style={styles.eventTime}>
+                    {new Date(item.eventTime).toLocaleString()}
+                  </Text>
                 </Pressable>
               </Link>
             </Swipeable>

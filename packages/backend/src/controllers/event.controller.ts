@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
 import { eventSchema, eventIdSchema } from '../validations/event.validation';
 import { isZodError, getErrorMessage } from '../utils/errorUtils';
+import { AppServices } from '../types';
+
+interface CustomRequest extends Request {
+  services?: AppServices;
+}
 
 /**
  * @swagger
@@ -32,14 +37,14 @@ import { isZodError, getErrorMessage } from '../utils/errorUtils';
  *         description: Validation error
  */
 
-export const createEvent = async (req: Request, res: Response) => {
+export const createEvent = async (req: CustomRequest, res: Response) => {
   try {
     if (!req.services) throw new Error('Services not available');
     const { eventService } = req.services;
 
     const validatedData = eventSchema.parse({
       ...req.body,
-      userId: req.user?.id || 'default-user',
+      userId: req.body.userId || 'default-user',
     });
 
     const event = await eventService.createEvent(validatedData);

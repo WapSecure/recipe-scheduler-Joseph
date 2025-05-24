@@ -3,12 +3,28 @@ import { getConfig } from '../config';
 
 const config = getConfig();
 
-export const redisConnection = new Redis(config.redisUrl, {
-  maxRetriesPerRequest: null,
-  enableReadyCheck: false
-});
+let redisConnection: Redis;
 
-// I Optionally added connection events for better debugging
+if (config.nodeEnv === 'test' || config.nodeEnv === 'development') {
+  // Use in-memory Redis mock for development
+  redisConnection = new Redis({
+    host: 'localhost',
+    port: 6379,
+    lazyConnect: true, 
+    enableOfflineQueue: false, 
+  });
+
+  redisConnection.on('error', () => {
+    // Silently ignore errors in development
+  });
+} else {
+  // Production configuration
+  redisConnection = new Redis(config.redisUrl, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false
+  });
+}
+
 redisConnection.on('connect', () => {
   if (config.nodeEnv !== 'test') {
     console.log('Connected to Redis');
@@ -16,5 +32,9 @@ redisConnection.on('connect', () => {
 });
 
 redisConnection.on('error', (err) => {
-  console.error('Redis connection error:', err);
+  if (config.nodeEnv !== 'test') {
+    console.error('Redis connection error:', err);
+  }
 });
+
+export { redisConnection };

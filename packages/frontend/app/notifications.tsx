@@ -2,49 +2,66 @@ import { FlatList, StyleSheet, Text } from 'react-native';
 import { View } from '@/components/Themed';
 import { useNotifications } from '@/services/notifications';
 import { useNetInfo } from '@react-native-community/netinfo';
-import * as Notifications from 'expo-notifications';
 import { useEffect } from 'react';
-
-// Mock data for offline mode
-const mockNotifications = [
-  {
-    title: 'Mock: Bake Cookies',
-    body: 'Your session starts soon (offline)',
-    timestamp: new Date().toISOString(),
-  },
-];
+import { ErrorHandler } from '@/components/ErrorHandler';
+import { registerForPushNotifications } from '@/services/notifications';
+import { Loading } from '@/components/Loading';
 
 export default function NotificationsScreen() {
-  const { notifications, addNotification } = useNotifications();
+  const { 
+    notifications, 
+    loading, 
+    error,
+    clearError 
+  } = useNotifications();
+  
   const { isConnected } = useNetInfo();
 
-  // Listen for real notifications
   useEffect(() => {
-    const subscription = Notifications.addNotificationReceivedListener((notification) => {
-      addNotification({
-        title: notification.request.content.title || 'New Reminder',
-        body: notification.request.content.body || '',
-      });
-    });
-    return () => subscription.remove();
+    const registerToken = async () => {
+      try {
+        const token = await registerForPushNotifications('test-user');
+        console.log('Push Token:', token);
+      } catch (err) {
+        console.error('Failed to register push notifications:', err);
+      }
+    };
+
+    registerToken();
   }, []);
 
-  const displayData = isConnected ? notifications : [...notifications, ...mockNotifications];
+  if (loading) {
+    return <Loading />;
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <ErrorHandler error={error} onDismiss={clearError} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>
-        {isConnected ? 'Your Notifications' : 'Offline Mode (mock data)'}
+        {isConnected ? 'Your Notifications' : 'Offline Mode'}
       </Text>
 
       <FlatList
-        data={displayData}
-        ListEmptyComponent={<Text style={styles.emptyText}>No notifications yet</Text>}
+        data={notifications}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            {isConnected ? 'No notifications yet' : 'Cannot load notifications offline'}
+          </Text>
+        }
         renderItem={({ item }) => (
           <View style={styles.notificationItem}>
             <Text style={styles.notificationTitle}>{item.title}</Text>
             <Text>{item.body}</Text>
-            <Text style={styles.notificationTime}>{new Date(item.timestamp).toLocaleString()}</Text>
+            <Text style={styles.notificationTime}>
+              {new Date(item.timestamp).toLocaleString()}
+            </Text>
           </View>
         )}
       />

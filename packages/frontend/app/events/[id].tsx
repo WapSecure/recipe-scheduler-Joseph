@@ -1,25 +1,32 @@
 import { useState } from 'react';
 import { Alert, StyleSheet } from 'react-native';
-import { Text, View } from '@/components/Themed';
+import { View } from '@/components/Themed';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEvents } from '@/services/events';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button, TextInput } from 'react-native-paper';
+import { ErrorHandler } from '@/components/ErrorHandler';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { events, updateEvent, deleteEvent } = useEvents();
+  const { events, updateEvent, deleteEvent, error } = useEvents();
   const router = useRouter();
   
   const event = events.find(e => e.id === id);
   const [title, setTitle] = useState(event?.title || '');
-  const [eventTime, setEventTime] = useState(new Date(event?.eventTime || Date.now()));
+  const [eventTime, setEventTime] = useState(
+    event?.eventTime ? new Date(event.eventTime) : new Date()
+  );
 
   if (!event) return null;
 
-  const handleSave = () => {
-    updateEvent(event.id, { title, eventTime: eventTime.toISOString() });
-    router.back();
+  const handleSave = async () => {
+    try {
+      await updateEvent(event.id, { title, eventTime: eventTime.toISOString() });
+      router.back();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update event');
+    }
   };
 
   const handleDelete = () => {
@@ -28,7 +35,17 @@ export default function EventDetailScreen() {
       'Are you sure you want to delete this event?',
       [
         { text: 'Cancel' },
-        { text: 'Delete', onPress: () => { deleteEvent(event.id); router.back(); } }
+        { 
+          text: 'Delete', 
+          onPress: async () => {
+            try {
+              await deleteEvent(event.id);
+              router.back();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete event');
+            }
+          } 
+        }
       ]
     );
   };
@@ -40,6 +57,7 @@ export default function EventDetailScreen() {
         headerBackTitle: 'Back',
       }} />
       <View style={styles.container}>
+        <ErrorHandler error={error} />
         <TextInput
           label="Title"
           value={title}

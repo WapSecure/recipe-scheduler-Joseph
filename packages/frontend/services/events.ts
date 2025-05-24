@@ -1,63 +1,90 @@
-import { useState } from 'react';
-import { Event } from '../../backend/src/models/interfaces';
+import { useState, useEffect } from 'react';
+import { 
+  getEvents as getEventsApi,
+  createEvent as createEventApi,
+  updateEvent as updateEventApi,
+  deleteEvent as deleteEventApi 
+} from './api';
 import { schedulePushNotification } from './notifications';
+import { Event as RecipeEvent } from '../../backend/src/models/interfaces';
+
+const TEST_USER_ID = 'test-user';
 
 export const useEvents = () => {
-  const [events, setEvents] = useState<Event[]>([
-    {
-      id: '1',
-      title: 'Bake Cookies',
-      eventTime: new Date(Date.now() + 86400000).toISOString(),
-      createdAt: new Date().toISOString(),
-      userId: 'user1'
+  const [events, setEvents] = useState<RecipeEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const events = await getEventsApi(TEST_USER_ID);
+      setEvents(events);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to load events'));
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
-  const createEvent = async (event: Omit<Event, 'id' | 'createdAt'>) => {
-    const newEvent = {
-      ...event,
-      id: Math.random().toString(36).substring(7),
-      createdAt: new Date().toISOString()
-    };
-    
-    setEvents(prev => [...prev, newEvent]);
+  useEffect(() => {
+    loadEvents();
+  }, []);
 
-    // Schedule notification
-    const reminderTime = new Date(newEvent.eventTime);
+  const createEvent = async (event: Omit<RecipeEvent, 'id' | 'createdAt'>) => {
+    try {
+      const newEvent = await createEventApi({ ...event, userId: TEST_USER_ID }); 
+      setEvents(prev => [...prev, newEvent]);
+      await scheduleReminder(newEvent);
+      return newEvent;
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Failed to create event');
+    }
+  };
+
+  const updateEvent = async (id: string, updates: Partial<RecipeEvent>) => {
+    try {
+      const updatedEvent = await updateEventApi(id, updates);
+      setEvents(prev => prev.map(e => e.id === id ? updatedEvent : e));
+      await scheduleReminder(updatedEvent);
+      return updatedEvent;
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Failed to update event');
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    try {
+      await deleteEventApi(id);
+      setEvents(prev => prev.filter(e => e.id !== id));
+    } catch (err) {
+      throw err instanceof Error ? err : new Error('Failed to delete event');
+    }
+  };
+
+  const scheduleReminder = async (event: RecipeEvent) => {
+    const reminderTime = new Date(event.eventTime);
     reminderTime.setMinutes(reminderTime.getMinutes() - 15);
     
     await schedulePushNotification(
-      `Reminder: ${newEvent.title}`,
-      `Starts at ${new Date(newEvent.eventTime).toLocaleString()}`,
+      `Reminder: ${event.title}`,
+      `Starts at ${new Date(event.eventTime).toLocaleString()}`,
       reminderTime
     );
-
-    return newEvent;
   };
 
-  const updateEvent = async (id: string, updates: Partial<Event>) => {
-    setEvents(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
-    
-    // Reschedule notification if time changed
-    if (updates.eventTime) {
-      const event = events.find(e => e.id === id);
-      if (event) {
-        const reminderTime = new Date(updates.eventTime);
-        reminderTime.setMinutes(reminderTime.getMinutes() - 15);
-        
-        await schedulePushNotification(
-          `Reminder: ${event.title}`,
-          `Starts at ${new Date(updates.eventTime).toLocaleString()}`,
-          reminderTime
-        );
-      }
-    }
+  const refetch = () => {
+    loadEvents();
   };
 
-  const deleteEvent = (id: string) => {
-    setEvents(prev => prev.filter(e => e.id !== id));
-    // Note: we can do more by cancelling scheduled notification here
+  return { 
+    events, 
+    loading, 
+    error,
+    createEvent, 
+    updateEvent, 
+    deleteEvent,
+    refetch
   };
-
-  return { events, createEvent, updateEvent, deleteEvent };
 };

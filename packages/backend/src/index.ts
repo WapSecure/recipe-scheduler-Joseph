@@ -1,51 +1,34 @@
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
-import http from 'http'; // Add this import
+import http from 'http';
 import { errorHandler } from './middlewares/errorHandler';
 import { router } from './routes';
-import { initializeDatabase } from './config/database';
-import { QueueService } from './services/queue.service';
-import { EventService } from './services/event.service';
-import { DeviceService } from './services/device.service';
+import { injectServices } from './middlewares/services.middleware';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './utils/swagger';
 
 export const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
-const server = http.createServer(app); // Create HTTP server
+const server = http.createServer(app);
 
-// Service Container
-export type Services = {
-  eventService: EventService;
-  deviceService: DeviceService;
-  queueService: QueueService;
-};
-
-const initializeServices = async (): Promise<Services> => {
-  await initializeDatabase();
-  const queueService = new QueueService();
-  const deviceService = new DeviceService();
-  const eventService = new EventService(queueService, deviceService);
-  return { eventService, deviceService, queueService };
-};
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+// Service injection middleware
+app.use(injectServices);
+
+// Routes
+app.use('/api', router);
+
+// Error handling (should be last)
+app.use(errorHandler);
+
+
 const startServer = async (port: number): Promise<http.Server> => {
-  const services = await initializeServices();
-  
-  app.use((req, res, next) => {
-    req.services = services;
-    next();
-  });
-
-  app.use('/api', router);
-  app.use(errorHandler);
-
   return new Promise((resolve, reject) => {
     const s = server.listen(port, () => {
       console.log(`Server running on port ${port}`);
@@ -67,12 +50,4 @@ startServer(PORT)
     console.error('Failed to start server:', error);
     process.exit(1);
   });
-
-// Type extensions
-declare global {
-  namespace Express {
-    interface Request {
-      services?: Services;
-    }
-  }
-}
+  
