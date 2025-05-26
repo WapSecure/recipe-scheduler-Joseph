@@ -3,23 +3,46 @@ import { Event as RecipeEvent } from '../../backend/src/models/interfaces';
 import { Platform, Alert } from 'react-native';
 
 // Dynamic base URL configuration
+// const getApiBaseUrl = () => {
+//   if (process.env.EXPO_PUBLIC_API_URL) {
+//     return process.env.EXPO_PUBLIC_API_URL;
+//   }
+
+//   // Platform-specific defaults
+//   return Platform.select({
+//     android: 'http://10.0.2.2:3000/api',
+//     ios: 'http://localhost:3000/api',
+//     default: 'http://localhost:3000/api',
+//   });
+// };
+
+// const api = axios.create({
+//   baseURL: getApiBaseUrl(),
+//   timeout: 15000,
+// });
+
 const getApiBaseUrl = () => {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
-
-  // Platform-specific defaults
-  return Platform.select({
-    android: 'http://10.0.2.2:3000/api',
-    ios: 'http://localhost:3000/api',
-    default: 'http://localhost:3000/api',
+    // For production/published builds, use the Ngrok URL
+    if (!__DEV__) {
+      return 'https://7d8b-197-210-29-130.ngrok-free.app/api';
+    }
+  
+    // For development (emulator/local device)
+    return Platform.select({
+      android: 'http://10.0.2.2:3000/api',
+      ios: 'http://localhost:3000/api',
+      default: 'http://localhost:3000/api',
+    });
+  };
+  
+  const api = axios.create({
+    baseURL: getApiBaseUrl(),
+    timeout: 15000,
+    headers: {
+      // Ngrok free tier requires this header
+      'ngrok-skip-browser-warning': 'true'
+    }
   });
-};
-
-const api = axios.create({
-  baseURL: getApiBaseUrl(),
-  timeout: 15000,
-});
 
 // Enhanced request interceptor
 api.interceptors.request.use(config => {
