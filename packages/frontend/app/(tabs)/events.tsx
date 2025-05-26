@@ -32,7 +32,7 @@ export default function EventsScreen() {
     return unsubscribe;
   }, [navigation]);
 
-  
+
 
   const renderRightActions = (id: string) => (
     <RectButton

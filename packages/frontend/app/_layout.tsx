@@ -4,8 +4,11 @@ import { useLoadFonts } from '@/components/FontLoader';
 import { ThemeProvider } from '@/components/Themed';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { setupNotificationChannel } from '@/utils/notifications';
+
 
 export default function RootLayout() {
+  setupNotificationChannel();
   const { fontsLoaded, fontError } = useLoadFonts();
 
   if (!fontsLoaded && !fontError) {

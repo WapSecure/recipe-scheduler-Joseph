@@ -21,34 +21,62 @@ export async function registerForPushNotifications(userId: string) {
     // Get projectId from Expo config
     const projectId = Constants.expoConfig?.extra?.projectId;
     if (!projectId) {
-      throw new Error('Project ID not found in app config');
+      console.error('Project ID not found in app config');
+      throw new Error('Project configuration error');
     }
 
-    // Check/request permissions
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    // Check permissions
+    let { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
+    // If permission not granted, request it
     if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
+      console.log('Requesting notification permissions...');
+      const { status } = await Notifications.requestPermissionsAsync({
+        ios: {
+          allowAlert: true,
+          allowBadge: true,
+          allowSound: true,
+          allowDisplayInCarPlay: false,
+          allowCriticalAlerts: false,
+          provideAppNotificationSettings: false,
+          allowProvisional: false,
+        },
+      });
       finalStatus = status;
     }
 
+    // If still not granted, show appropriate message
     if (finalStatus !== 'granted') {
-      Alert.alert('Permission required', 'Push notifications need to be enabled in settings');
+      console.log('Notification permission denied');
+      Alert.alert(
+        'Permission Required', 
+        'Please enable notifications in your device settings to receive reminders.'
+      );
       return null;
     }
 
-    // Get and register token
-    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+    // Get push token
+    console.log('Getting push token...');
+    const token = (await Notifications.getExpoPushTokenAsync({ 
+      projectId,
+      devicePushToken: await Notifications.getDevicePushTokenAsync()
+    })).data;
 
+    if (!token) {
+      throw new Error('Failed to get push token');
+    }
+
+    console.log('Registering device token with backend...');
     await registerDeviceToken(userId, token);
-    console.log('Registered push token:', token);
+    console.log('Push token registered successfully');
     return token;
   } catch (error) {
-    console.error('Failed to register push notifications:', error);
+    console.error('Push notification registration failed:', error);
     Alert.alert(
-      'Notification error',
-      'Could not set up push notifications. Please try again later.'
+      'Notification Setup', 
+      'We encountered an issue setting up notifications. ' +
+      'Please ensure you have an active internet connection and try again.'
     );
     return null;
   }

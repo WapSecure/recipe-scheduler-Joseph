@@ -1,8 +1,11 @@
 import { Tabs } from 'expo-router';
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/components/Themed';
+import { setupNotificationChannel } from '@/utils/notifications';
+
 
 export default function TabLayout() {
+  setupNotificationChannel();
   const { theme } = useTheme();
 
   return (
