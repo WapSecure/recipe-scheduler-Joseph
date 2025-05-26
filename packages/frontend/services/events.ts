@@ -32,14 +32,33 @@ export const useEvents = () => {
     loadEvents();
   }, []);
 
+  // const createEvent = async (event: Omit<RecipeEvent, 'id' | 'createdAt'>) => {
+  //   try {
+  //     const newEvent = await createEventApi({ ...event, userId: TEST_USER_ID }); 
+  //     setEvents(prev => [...prev, newEvent]);
+  //     await scheduleReminder(newEvent);
+  //     return newEvent;
+  //   } catch (err) {
+  //     throw err instanceof Error ? err : new Error('Failed to create event');
+  //   }
+  // };
+
+
   const createEvent = async (event: Omit<RecipeEvent, 'id' | 'createdAt'>) => {
     try {
-      const newEvent = await createEventApi({ ...event, userId: TEST_USER_ID }); 
-      setEvents(prev => [...prev, newEvent]);
-      await scheduleReminder(newEvent);
+      // Explicitly include userId and ensure proper date format
+      const payload = {
+        ...event,
+        userId: TEST_USER_ID,
+        eventTime: new Date(event.eventTime).toISOString()
+      };
+      
+      console.log('Sending payload:', payload);
+      const newEvent = await createEventApi(payload); 
       return newEvent;
     } catch (err) {
-      throw err instanceof Error ? err : new Error('Failed to create event');
+      console.error('Create event error:', err);
+      throw err;
     }
   };
 

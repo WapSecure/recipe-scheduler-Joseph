@@ -15,10 +15,20 @@ export default function NewEventScreen() {
 
   const handleCreate = async () => {
     try {
-      await createEvent({ title, eventTime: eventTime.toISOString() });
+      const payload = {
+        title,
+        eventTime: eventTime.toISOString(),
+        userId: 'test-user'
+      };
+      console.log('Sending payload:', payload);
+      await createEvent(payload);
       router.back();
     } catch (error) {
-      Alert.alert('Error', 'Failed to create event');
+      console.error('Full error:', error);
+      Alert.alert(
+        'Error', 
+        error instanceof Error ? error.message : 'Failed to create event'
+      );
     }
   };
 
