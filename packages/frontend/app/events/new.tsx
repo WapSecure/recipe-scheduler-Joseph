@@ -22,7 +22,11 @@ export default function NewEventScreen() {
       };
       console.log('Sending payload:', payload);
       await createEvent(payload);
-      router.back();
+      router.replace({
+        pathname: '/events',
+        params: { refresh: Date.now() }
+      });
+      // router.back();
     } catch (error) {
       console.error('Full error:', error);
       Alert.alert(

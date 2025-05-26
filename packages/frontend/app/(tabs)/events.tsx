@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Alert } from 'react-native';
 import { Link } from 'expo-router';
 import { Text, View } from '@/components/Themed';
@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ErrorHandler } from '@/components/ErrorHandler';
+import { useEffect } from 'react';
 
 type RootStackParamList = {
   'events/new': undefined;
@@ -20,7 +21,18 @@ type RootStackParamList = {
 
 export default function EventsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { events, loading, error, deleteEvent } = useEvents();
+  const { events, loading, error, deleteEvent, refetch } = useEvents();
+  const router = useRouter();
+
+  
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      refetch();
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  
 
   const renderRightActions = (id: string) => (
     <RectButton

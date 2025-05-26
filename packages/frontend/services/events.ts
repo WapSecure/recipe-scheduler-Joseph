@@ -29,36 +29,39 @@ export const useEvents = () => {
   };
 
   useEffect(() => {
+    console.log('Events updated:', events);
+  }, [events]);
+
+  useEffect(() => {
     loadEvents();
   }, []);
 
-  // const createEvent = async (event: Omit<RecipeEvent, 'id' | 'createdAt'>) => {
-  //   try {
-  //     const newEvent = await createEventApi({ ...event, userId: TEST_USER_ID }); 
-  //     setEvents(prev => [...prev, newEvent]);
-  //     await scheduleReminder(newEvent);
-  //     return newEvent;
-  //   } catch (err) {
-  //     throw err instanceof Error ? err : new Error('Failed to create event');
-  //   }
-  // };
-
-
   const createEvent = async (event: Omit<RecipeEvent, 'id' | 'createdAt'>) => {
+    // Declare tempId outside the try-catch block
+    const tempId = Date.now().toString(); // Temporary ID for optimistic update
+    
     try {
-      // Explicitly include userId and ensure proper date format
-      const payload = {
+      const optimisticEvent = {
         ...event,
-        userId: TEST_USER_ID,
-        eventTime: new Date(event.eventTime).toISOString()
+        id: tempId,
+        createdAt: new Date().toISOString(),
+        userId: TEST_USER_ID
       };
       
-      console.log('Sending payload:', payload);
-      const newEvent = await createEventApi(payload); 
+      setEvents(prev => [...prev, optimisticEvent]);
+      
+      // Actual API call
+      const newEvent = await createEventApi({ ...event, userId: TEST_USER_ID });
+      
+      // Replace optimistic update with real data
+      setEvents(prev => prev.map(e => e.id === tempId ? newEvent : e));
+      
+      await scheduleReminder(newEvent);
       return newEvent;
     } catch (err) {
-      console.error('Create event error:', err);
-      throw err;
+      // Rollback on error
+      setEvents(prev => prev.filter(e => e.id !== tempId));
+      throw err instanceof Error ? err : new Error('Failed to create event');
     }
   };
 
