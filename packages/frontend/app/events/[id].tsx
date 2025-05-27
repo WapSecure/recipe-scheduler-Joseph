@@ -6,32 +6,33 @@ import { useEvents } from '@/services/events';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button, TextInput } from 'react-native-paper';
 import { ErrorHandler } from '@/components/ErrorHandler';
-import { Loading } from '@/components/Loading';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { events, updateEvent, deleteEvent, error, loading } = useEvents();
+  const { events, updateEvent, deleteEvent, error } = useEvents();
   const router = useRouter();
   
   const event = events.find(e => e.id === id);
   const [title, setTitle] = useState('');
   const [eventTime, setEventTime] = useState(new Date());
-  const [initialized, setInitialized] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [initialData, setInitialData] = useState({ title: '', eventTime: new Date() });
 
   useEffect(() => {
-    if (event && !initialized) {
+    if (event) {
       setTitle(event.title);
       setEventTime(new Date(event.eventTime));
-      setInitialized(true);
+      setInitialData({
+        title: event.title,
+        eventTime: new Date(event.eventTime)
+      });
     }
   }, [event]);
 
-  if (loading || !initialized) return <Loading />;
   if (!event) return null;
 
-  const hasChanges = title !== event.title || eventTime.toISOString() !== new Date(event.eventTime).toISOString();
+  const hasChanges = 
+    title !== initialData.title || 
+    eventTime.getTime() !== initialData.eventTime.getTime();
 
   const handleSave = async () => {
     try {
@@ -79,42 +80,16 @@ export default function EventDetailScreen() {
           mode="outlined"
         />
         
-        {showDatePicker && (
-          <DateTimePicker
-            value={eventTime}
-            mode="date"
-            display="default"
-            onChange={(_, date) => {
-              if (date) {
-                setEventTime(date);
-                setShowDatePicker(false);
-                setShowTimePicker(true);
-              }
-            }}
-          />
-        )}
-
-        {showTimePicker && (
-          <DateTimePicker
-            value={eventTime}
-            mode="time"
-            display="default"
-            onChange={(_, date) => {
-              if (date) {
-                setEventTime(date);
-                setShowTimePicker(false);
-              }
-            }}
-          />
-        )}
-
-        <Button 
-          mode="outlined" 
-          onPress={() => setShowDatePicker(true)}
-          style={styles.button}
-        >
-          {eventTime.toLocaleDateString()} {eventTime.toLocaleTimeString()}
-        </Button>
+        <DateTimePicker
+          value={eventTime}
+          mode="datetime"
+          display="default"
+          onChange={(_, date) => {
+            if (date) {
+              setEventTime(date);
+            }
+          }}
+        />
 
         <Button 
           mode="contained" 

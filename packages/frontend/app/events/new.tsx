@@ -10,12 +10,8 @@ import { ErrorHandler } from '@/components/ErrorHandler';
 export default function NewEventScreen() {
   const [title, setTitle] = useState('');
   const [eventTime, setEventTime] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const { createEvent, error } = useEvents();
   const router = useRouter();
-
-  const isValid = title.trim().length > 0;
 
   const handleCreate = async () => {
     try {
@@ -24,6 +20,7 @@ export default function NewEventScreen() {
         eventTime: eventTime.toISOString(),
         userId: 'test-user'
       };
+      console.log('Sending payload:', payload);
       await createEvent(payload);
       router.replace({
         pathname: '/events',
@@ -54,48 +51,22 @@ export default function NewEventScreen() {
           mode="outlined"
         />
         
-        {showDatePicker && (
-          <DateTimePicker
-            value={eventTime}
-            mode="date"
-            display="default"
-            onChange={(_, date) => {
-              if (date) {
-                setEventTime(date);
-                setShowDatePicker(false);
-                setShowTimePicker(true);
-              }
-            }}
-          />
-        )}
-
-        {showTimePicker && (
-          <DateTimePicker
-            value={eventTime}
-            mode="time"
-            display="default"
-            onChange={(_, date) => {
-              if (date) {
-                setEventTime(date);
-                setShowTimePicker(false);
-              }
-            }}
-          />
-        )}
-
-        <Button 
-          mode="outlined" 
-          onPress={() => setShowDatePicker(true)}
-          style={styles.button}
-        >
-          {eventTime.toLocaleDateString()} {eventTime.toLocaleTimeString()}
-        </Button>
+        <DateTimePicker
+          value={eventTime}
+          mode="datetime"
+          display="default"
+          onChange={(_, date) => {
+            if (date) {
+              setEventTime(date);
+            }
+          }}
+        />
 
         <Button 
           mode="contained" 
           onPress={handleCreate} 
           style={styles.button}
-          disabled={!isValid}
+          disabled={!title.trim()}
         >
           Create Event
         </Button>
