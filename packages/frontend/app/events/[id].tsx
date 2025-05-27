@@ -33,22 +33,27 @@ export default function EventDetailScreen() {
   const hasChanges =
     title !== initialData.title || eventTime.getTime() !== initialData.eventTime.getTime();
 
-  const handleSave = async () => {
-    try {
-      await updateEvent(event.id, { title, eventTime: eventTime.toISOString() });
-      router.back();
-    } catch (error) {
-      let errorMessage = 'Failed to update event';
-
-      if (error instanceof Error) {
-        errorMessage = error.message.includes('must be in the future')
-          ? 'Please select a future date and time for your event'
-          : error.message;
+    const handleSave = async () => {
+      try {
+        if (new Date(eventTime) <= new Date()) {
+          Alert.alert(
+            'Invalid Date',
+            'Please select a future date and time for your event',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+    
+        await updateEvent(event.id, { title, eventTime: eventTime.toISOString() });
+        router.back();
+      } catch (error) {
+        Alert.alert(
+          'Error',
+          error instanceof Error ? error.message : 'Failed to update event',
+          [{ text: 'OK' }]
+        );
       }
-
-      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
-    }
-  };
+    };
 
   const handleDelete = () => {
     Alert.alert('Delete Event', 'Are you sure you want to delete this event?', [

@@ -15,28 +15,26 @@ export default function NewEventScreen() {
 
   const handleCreate = async () => {
     try {
+      if (new Date(eventTime) <= new Date()) {
+        Alert.alert(
+          'Invalid Date',
+          'Please select a future date and time for your event',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+  
       const payload = {
         title,
         eventTime: eventTime.toISOString(),
         userId: 'test-user'
       };
       await createEvent(payload);
-      router.replace({
-        pathname: '/events',
-        params: { refresh: Date.now() }
-      });
+      router.replace('/events');
     } catch (error) {
-      let errorMessage = 'Failed to create event';
-      
-      if (error instanceof Error) {
-        errorMessage = error.message.includes('must be in the future')
-          ? 'Please select a future date and time for your event'
-          : error.message;
-      }
-  
       Alert.alert(
-        'Error', 
-        errorMessage,
+        'Error',
+        error instanceof Error ? error.message : 'Failed to create event',
         [{ text: 'OK' }]
       );
     }

@@ -2,85 +2,89 @@ import axios from 'axios';
 import { Event as RecipeEvent } from '../../backend/src/models/interfaces';
 import { Platform, Alert } from 'react-native';
 
-// Dynamic base URL configuration
-// const getApiBaseUrl = () => {
-//   if (process.env.EXPO_PUBLIC_API_URL) {
-//     return process.env.EXPO_PUBLIC_API_URL;
-//   }
-
-//   // Platform-specific defaults
-//   return Platform.select({
-//     android: 'http://10.0.2.2:3000/api',
-//     ios: 'http://localhost:3000/api',
-//     default: 'http://localhost:3000/api',
-//   });
-// };
-
-// const api = axios.create({
-//   baseURL: getApiBaseUrl(),
-//   timeout: 15000,
-// });
-
 const getApiBaseUrl = () => {
-    // For production/published builds, use the Ngrok URL
-    if (!__DEV__) {
-      return 'https://7d8b-197-210-29-130.ngrok-free.app/api';
-    }
-  
-    // For development (emulator/local device)
-    return Platform.select({
-      android: 'http://10.0.2.2:3000/api',
-      ios: 'http://localhost:3000/api',
-      default: 'http://localhost:3000/api',
-    });
-  };
-  
-  const api = axios.create({
-    baseURL: getApiBaseUrl(),
-    timeout: 15000,
-    headers: {
-      // Ngrok free tier requires this header
-      'ngrok-skip-browser-warning': 'true'
-    }
+  // For production/published builds, use the Ngrok URL
+  if (!__DEV__) {
+    return 'https://7d8b-197-210-29-130.ngrok-free.app/api';
+  }
+
+  // For development (emulator/local device)
+  return Platform.select({
+    android: 'http://10.0.2.2:3000/api',
+    ios: 'http://localhost:3000/api',
+    default: 'http://localhost:3000/api',
   });
+};
+
+const api = axios.create({
+  baseURL: getApiBaseUrl(),
+  timeout: 15000,
+  headers: {
+    // Ngrok free tier requires this header
+    'ngrok-skip-browser-warning': 'true',
+  },
+});
 
 // Enhanced request interceptor
-api.interceptors.request.use(config => {
+api.interceptors.request.use((config) => {
   console.log('Making request to:', config.url);
   return config;
 });
 
 // Enhanced response interceptor
 api.interceptors.response.use(
-  response => {
+  (response) => {
     console.log('Response from:', response.config.url);
     return response;
   },
-  error => {
-    let errorMessage = 'Network error';
-    
+  (error) => {
+    let errorMessage = 'Something went wrong';
+    let showAlert = false;
+    let alertTitle = 'Error';
+
     if (error.response) {
-      // Server responded with non-2xx status
-      errorMessage = error.response.data?.error || `Server error: ${error.response.status}`;
+      const responseData = error.response.data;
+
+      if (typeof responseData === 'string') {
+        errorMessage = responseData;
+      } else if (responseData?.error) {
+        errorMessage = responseData.error;
+      } else if (responseData?.message) {
+        errorMessage = responseData.message;
+      } else if (responseData?.errors) {
+        errorMessage = (responseData.errors as Array<{ message: string }>)
+          .map((e) => e.message)
+          .join('\n');
+      } else {
+        errorMessage = `Server error: ${error.response.status}`;
+      }
+
+      if (
+        errorMessage.toLowerCase().includes('future') ||
+        errorMessage.toLowerCase().includes('date') ||
+        errorMessage.toLowerCase().includes('time')
+      ) {
+        errorMessage = 'Please select a future date and time';
+      }
+
+      showAlert = true;
     } else if (error.request) {
-      // Request made but no response
-      errorMessage = 'No response from server';
+      errorMessage = 'No response from server - please check your connection';
+      alertTitle = 'Connection Error';
+      showAlert = true;
     } else {
-      // Something happened in setting up the request
-      errorMessage = error.message || 'Request setup error';
+      errorMessage = error.message || 'Failed to process request';
     }
 
     console.error('API Error:', errorMessage, error.config?.url);
-    
-    // Show user-friendly alert for network errors
-    if (errorMessage.includes('Network') || errorMessage.includes('response')) {
-      Alert.alert(
-        'Connection Error',
-        'Could not connect to the server. Please check your network connection.'
-      );
+
+    const apiError = new Error(errorMessage);
+
+    if (showAlert) {
+      Alert.alert(alertTitle, errorMessage, [{ text: 'OK' }]);
     }
 
-    return Promise.reject(error);
+    return Promise.reject(apiError);
   }
 );
 
@@ -97,8 +101,8 @@ export const registerDeviceToken = async (userId: string, pushToken: string) => 
 
 export const getEvents = async (userId: string) => {
   try {
-    const response = await api.get<RecipeEvent[]>('/events', { 
-      params: { userId } 
+    const response = await api.get<RecipeEvent[]>('/events', {
+      params: { userId },
     });
     return response.data;
   } catch (error) {
