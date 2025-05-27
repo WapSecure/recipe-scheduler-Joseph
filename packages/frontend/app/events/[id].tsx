@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, StyleSheet } from 'react-native';
 import { View } from '@/components/Themed';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,12 +13,28 @@ export default function EventDetailScreen() {
   const router = useRouter();
   
   const event = events.find(e => e.id === id);
-  const [title, setTitle] = useState(event?.title || '');
-  const [eventTime, setEventTime] = useState(
-    event?.eventTime ? new Date(event.eventTime) : new Date()
-  );
+  const [title, setTitle] = useState('');
+  const [eventTime, setEventTime] = useState(new Date());
+  const [initialData, setInitialData] = useState({ title: '', eventTime: new Date() });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  useEffect(() => {
+    if (event) {
+      setTitle(event.title);
+      setEventTime(new Date(event.eventTime));
+      setInitialData({
+        title: event.title,
+        eventTime: new Date(event.eventTime)
+      });
+    }
+  }, [event]);
 
   if (!event) return null;
+
+  const hasChanges = 
+    title !== initialData.title || 
+    eventTime.getTime() !== initialData.eventTime.getTime();
 
   const handleSave = async () => {
     try {
@@ -66,14 +82,52 @@ export default function EventDetailScreen() {
           mode="outlined"
         />
         
-        <DateTimePicker
-          value={eventTime}
-          mode="datetime"
-          display="default"
-          onChange={(_, date) => date && setEventTime(date)}
-        />
+        {showDatePicker && (
+          <DateTimePicker
+            value={eventTime}
+            mode="date"
+            display="default"
+            onChange={(_, date) => {
+              setShowDatePicker(false);
+              date && setEventTime(date);
+            }}
+          />
+        )}
 
-        <Button mode="contained" onPress={handleSave} style={styles.button}>
+        {showTimePicker && (
+          <DateTimePicker
+            value={eventTime}
+            mode="time"
+            display="default"
+            onChange={(_, date) => {
+              setShowTimePicker(false);
+              date && setEventTime(date);
+            }}
+          />
+        )}
+
+        <Button 
+          mode="outlined" 
+          onPress={() => setShowDatePicker(true)}
+          style={styles.button}
+        >
+          Select Date
+        </Button>
+
+        <Button 
+          mode="outlined" 
+          onPress={() => setShowTimePicker(true)}
+          style={styles.button}
+        >
+          Select Time
+        </Button>
+
+        <Button 
+          mode="contained" 
+          onPress={handleSave} 
+          style={styles.button}
+          disabled={!hasChanges}
+        >
           Save Changes
         </Button>
         

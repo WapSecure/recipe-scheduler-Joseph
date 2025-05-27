@@ -10,6 +10,8 @@ import { ErrorHandler } from '@/components/ErrorHandler';
 export default function NewEventScreen() {
   const [title, setTitle] = useState('');
   const [eventTime, setEventTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const { createEvent, error } = useEvents();
   const router = useRouter();
 
@@ -26,7 +28,6 @@ export default function NewEventScreen() {
         pathname: '/events',
         params: { refresh: Date.now() }
       });
-      // router.back();
     } catch (error) {
       console.error('Full error:', error);
       Alert.alert(
@@ -52,14 +53,52 @@ export default function NewEventScreen() {
           mode="outlined"
         />
         
-        <DateTimePicker
-          value={eventTime}
-          mode="datetime"
-          display="default"
-          onChange={(_, date) => date && setEventTime(date)}
-        />
+        {showDatePicker && (
+          <DateTimePicker
+            value={eventTime}
+            mode="date"
+            display="default"
+            onChange={(_, date) => {
+              setShowDatePicker(false);
+              date && setEventTime(date);
+            }}
+          />
+        )}
 
-        <Button mode="contained" onPress={handleCreate} style={styles.button}>
+        {showTimePicker && (
+          <DateTimePicker
+            value={eventTime}
+            mode="time"
+            display="default"
+            onChange={(_, date) => {
+              setShowTimePicker(false);
+              date && setEventTime(date);
+            }}
+          />
+        )}
+
+        <Button 
+          mode="outlined" 
+          onPress={() => setShowDatePicker(true)}
+          style={styles.button}
+        >
+          Select Date
+        </Button>
+
+        <Button 
+          mode="outlined" 
+          onPress={() => setShowTimePicker(true)}
+          style={styles.button}
+        >
+          Select Time
+        </Button>
+
+        <Button 
+          mode="contained" 
+          onPress={handleCreate} 
+          style={styles.button}
+          disabled={!title.trim()}
+        >
           Create Event
         </Button>
       </View>
@@ -76,6 +115,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    marginTop: 16,
+    marginTop: 8,
   },
 });
