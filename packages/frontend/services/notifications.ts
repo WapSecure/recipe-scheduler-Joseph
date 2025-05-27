@@ -18,66 +18,63 @@ export async function registerForPushNotifications(userId: string) {
       return null;
     }
 
-    // Get projectId from Expo config
-    const projectId = Constants.expoConfig?.extra?.projectId;
-    if (!projectId) {
-      console.error('Project ID not found in app config');
-      throw new Error('Project configuration error');
+    // Ensure notification channel is set up (Android)
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
     }
 
-    // Check permissions
+    // Get projectId - handle cases where it might be missing
+    const projectId = Constants.expoConfig?.extra?.projectId;
+    if (!projectId) {
+      console.warn('Project ID not found in app config - using fallback');
+      // You can use a fallback project ID here if needed
+      throw new Error('Notification configuration incomplete');
+    }
+
+    // Check current permissions
     let { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
-    // If permission not granted, request it
+    // Request permissions if not granted
     if (existingStatus !== 'granted') {
       console.log('Requesting notification permissions...');
-      const { status } = await Notifications.requestPermissionsAsync({
-        ios: {
-          allowAlert: true,
-          allowBadge: true,
-          allowSound: true,
-          allowDisplayInCarPlay: false,
-          allowCriticalAlerts: false,
-          provideAppNotificationSettings: false,
-          allowProvisional: false,
-        },
-      });
+      const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
 
-    // If still not granted, show appropriate message
+    // Handle denied permissions
     if (finalStatus !== 'granted') {
       console.log('Notification permission denied');
-      Alert.alert(
-        'Permission Required', 
-        'Please enable notifications in your device settings to receive reminders.'
-      );
       return null;
     }
 
     // Get push token
     console.log('Getting push token...');
-    const token = (await Notifications.getExpoPushTokenAsync({ 
-      projectId,
-      devicePushToken: await Notifications.getDevicePushTokenAsync()
-    })).data;
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: Constants.expoConfig?.extra?.projectId,
+    });
 
-    if (!token) {
+    if (!tokenData.data) {
       throw new Error('Failed to get push token');
     }
 
     console.log('Registering device token with backend...');
-    await registerDeviceToken(userId, token);
-    console.log('Push token registered successfully');
-    return token;
+    try {
+      await registerDeviceToken(userId, tokenData.data);
+      console.log('Push token registered successfully');
+      return tokenData.data;
+    } catch (registrationError) {
+      console.error('Failed to register token with backend:', registrationError);
+      // Still return the token even if backend registration fails
+      return tokenData.data;
+    }
   } catch (error) {
-    console.error('Push notification registration failed:', error);
-    Alert.alert(
-      'Notification Setup', 
-      'We encountered an issue setting up notifications. ' +
-      'Please ensure you have an active internet connection and try again.'
-    );
+    console.error('Push notification setup error:', error);
     return null;
   }
 }

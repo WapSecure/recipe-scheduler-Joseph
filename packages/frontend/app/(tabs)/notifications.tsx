@@ -1,5 +1,5 @@
 import * as Notifications from 'expo-notifications';
-import { FlatList, StyleSheet, Text } from 'react-native';
+import { Alert, FlatList, StyleSheet, Text } from 'react-native';
 import { View } from '@/components/Themed';
 import { useNotifications } from '@/services/notifications';
 import { useNetInfo } from '@react-native-community/netinfo';
@@ -29,20 +29,23 @@ export default function NotificationsScreen() {
     checkPermissions();
   }, []);
 
-  useEffect(() => {
-    const setupNotifications = async () => {
-      try {
-        if (permissionStatus === 'granted') {
-          const token = await registerForPushNotifications('test-user');
-          console.log('Push Token:', token);
-        }
-      } catch (err) {
-        console.error('Notification setup error:', err);
+  const handleEnableNotifications = async () => {
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      setPermissionStatus(status);
+      
+      if (status === 'granted') {
+        const token = await registerForPushNotifications('test-user');
+        console.log('Notification token after enabling:', token);
       }
-    };
-
-    setupNotifications();
-  }, [permissionStatus]);
+    } catch (err) {
+      console.error('Error enabling notifications:', err);
+      Alert.alert(
+        'Permission Error',
+        'Failed to enable notifications. Please try again.'
+      );
+    }
+  };
 
   if (loading) {
     return <Loading />;
@@ -54,7 +57,7 @@ export default function NotificationsScreen() {
         <ErrorHandler error={error} onDismiss={clearError} />
         {permissionStatus !== 'granted' && (
           <Button 
-            onPress={() => Notifications.requestPermissionsAsync()}
+            onPress={handleEnableNotifications}
             mode="contained"
             style={styles.permissionButton}
           >
@@ -77,7 +80,7 @@ export default function NotificationsScreen() {
             Notifications are disabled. Enable them to receive reminders.
           </Text>
           <Button 
-            onPress={() => Notifications.requestPermissionsAsync()}
+            onPress={handleEnableNotifications}
             mode="contained"
             style={styles.permissionButton}
           >
