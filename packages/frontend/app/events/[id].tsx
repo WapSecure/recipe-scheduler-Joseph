@@ -11,8 +11,8 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
   const { events, updateEvent, deleteEvent, error } = useEvents();
   const router = useRouter();
-  
-  const event = events.find(e => e.id === id);
+
+  const event = events.find((e) => e.id === id);
   const [title, setTitle] = useState('');
   const [eventTime, setEventTime] = useState(new Date());
   const [initialData, setInitialData] = useState({ title: '', eventTime: new Date() });
@@ -23,53 +23,58 @@ export default function EventDetailScreen() {
       setEventTime(new Date(event.eventTime));
       setInitialData({
         title: event.title,
-        eventTime: new Date(event.eventTime)
+        eventTime: new Date(event.eventTime),
       });
     }
   }, [event]);
 
   if (!event) return null;
 
-  const hasChanges = 
-    title !== initialData.title || 
-    eventTime.getTime() !== initialData.eventTime.getTime();
+  const hasChanges =
+    title !== initialData.title || eventTime.getTime() !== initialData.eventTime.getTime();
 
   const handleSave = async () => {
     try {
       await updateEvent(event.id, { title, eventTime: eventTime.toISOString() });
       router.back();
     } catch (error) {
-      Alert.alert('Error', 'Failed to update event');
+      let errorMessage = 'Failed to update event';
+
+      if (error instanceof Error) {
+        errorMessage = error.message.includes('must be in the future')
+          ? 'Please select a future date and time for your event'
+          : error.message;
+      }
+
+      Alert.alert('Error', errorMessage, [{ text: 'OK' }]);
     }
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Delete Event',
-      'Are you sure you want to delete this event?',
-      [
-        { text: 'Cancel' },
-        { 
-          text: 'Delete', 
-          onPress: async () => {
-            try {
-              await deleteEvent(event.id);
-              router.back();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete event');
-            }
-          } 
-        }
-      ]
-    );
+    Alert.alert('Delete Event', 'Are you sure you want to delete this event?', [
+      { text: 'Cancel' },
+      {
+        text: 'Delete',
+        onPress: async () => {
+          try {
+            await deleteEvent(event.id);
+            router.back();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to delete event');
+          }
+        },
+      },
+    ]);
   };
 
   return (
     <>
-      <Stack.Screen options={{ 
-        title: 'Event Details',
-        headerBackTitle: 'Back',
-      }} />
+      <Stack.Screen
+        options={{
+          title: 'Event Details',
+          headerBackTitle: 'Back',
+        }}
+      />
       <View style={styles.container}>
         <ErrorHandler error={error} />
         <TextInput
@@ -79,7 +84,7 @@ export default function EventDetailScreen() {
           style={styles.input}
           mode="outlined"
         />
-        
+
         <DateTimePicker
           value={eventTime}
           mode="datetime"
@@ -91,15 +96,10 @@ export default function EventDetailScreen() {
           }}
         />
 
-        <Button 
-          mode="contained" 
-          onPress={handleSave} 
-          style={styles.button}
-          disabled={!hasChanges}
-        >
+        <Button mode="contained" onPress={handleSave} style={styles.button} disabled={!hasChanges}>
           Save Changes
         </Button>
-        
+
         <Button mode="outlined" onPress={handleDelete} style={styles.button}>
           Delete Event
         </Button>

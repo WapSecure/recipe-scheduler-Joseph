@@ -20,17 +20,24 @@ export default function NewEventScreen() {
         eventTime: eventTime.toISOString(),
         userId: 'test-user'
       };
-      console.log('Sending payload:', payload);
       await createEvent(payload);
       router.replace({
         pathname: '/events',
         params: { refresh: Date.now() }
       });
     } catch (error) {
-      console.error('Full error:', error);
+      let errorMessage = 'Failed to create event';
+      
+      if (error instanceof Error) {
+        errorMessage = error.message.includes('must be in the future')
+          ? 'Please select a future date and time for your event'
+          : error.message;
+      }
+  
       Alert.alert(
         'Error', 
-        error instanceof Error ? error.message : 'Failed to create event'
+        errorMessage,
+        [{ text: 'OK' }]
       );
     }
   };
