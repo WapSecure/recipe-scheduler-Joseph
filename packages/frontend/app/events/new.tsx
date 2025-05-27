@@ -15,6 +15,8 @@ export default function NewEventScreen() {
   const { createEvent, error } = useEvents();
   const router = useRouter();
 
+  const isValid = title.trim().length > 0;
+
   const handleCreate = async () => {
     try {
       const payload = {
@@ -22,7 +24,6 @@ export default function NewEventScreen() {
         eventTime: eventTime.toISOString(),
         userId: 'test-user'
       };
-      console.log('Sending payload:', payload);
       await createEvent(payload);
       router.replace({
         pathname: '/events',
@@ -59,8 +60,11 @@ export default function NewEventScreen() {
             mode="date"
             display="default"
             onChange={(_, date) => {
-              setShowDatePicker(false);
-              date && setEventTime(date);
+              if (date) {
+                setEventTime(date);
+                setShowDatePicker(false);
+                setShowTimePicker(true);
+              }
             }}
           />
         )}
@@ -71,8 +75,10 @@ export default function NewEventScreen() {
             mode="time"
             display="default"
             onChange={(_, date) => {
-              setShowTimePicker(false);
-              date && setEventTime(date);
+              if (date) {
+                setEventTime(date);
+                setShowTimePicker(false);
+              }
             }}
           />
         )}
@@ -82,22 +88,14 @@ export default function NewEventScreen() {
           onPress={() => setShowDatePicker(true)}
           style={styles.button}
         >
-          Select Date
-        </Button>
-
-        <Button 
-          mode="outlined" 
-          onPress={() => setShowTimePicker(true)}
-          style={styles.button}
-        >
-          Select Time
+          {eventTime.toLocaleDateString()} {eventTime.toLocaleTimeString()}
         </Button>
 
         <Button 
           mode="contained" 
           onPress={handleCreate} 
           style={styles.button}
-          disabled={!title.trim()}
+          disabled={!isValid}
         >
           Create Event
         </Button>
@@ -115,6 +113,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   button: {
-    marginTop: 8,
+    marginTop: 16,
   },
 });
