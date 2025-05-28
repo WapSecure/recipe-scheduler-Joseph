@@ -14,12 +14,14 @@ export const useEvents = () => {
   const [events, setEvents] = useState<RecipeEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [hasMore, setHasMore] = useState(true);
 
-  const loadEvents = async () => {
+  const loadEvents = async (limit: number = 10, offset: number = 0) => {
     try {
       setLoading(true);
-      const events = await getEventsApi(TEST_USER_ID);
-      setEvents(events);
+      const response = await getEventsApi(TEST_USER_ID, limit, offset);
+      setEvents(prev => offset === 0 ? response.data : [...prev, ...response.data]);
+      setHasMore(response.pagination.hasMore);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to load events'));
@@ -35,6 +37,7 @@ export const useEvents = () => {
   useEffect(() => {
     loadEvents();
   }, []);
+
 
   const createEvent = async (event: Omit<RecipeEvent, 'id' | 'createdAt'>) => {
     const tempId = Date.now().toString(); // Temporary ID for optimistic update
@@ -105,6 +108,8 @@ export const useEvents = () => {
     events, 
     loading, 
     error,
+    hasMore,
+    loadEvents, 
     createEvent, 
     updateEvent, 
     deleteEvent,

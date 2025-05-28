@@ -20,30 +20,32 @@ type RootStackParamList = {
 };
 
 export default function EventsScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { events, loading, error, deleteEvent, loadEvents, hasMore } = useEvents();
+
   const [pagination, setPagination] = useState({
     limit: 10,
     offset: 0,
     hasMore: true,
   });
 
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { events, loading, error, deleteEvent, refetch } = useEvents();
-
   const router = useRouter();
 
   const loadMoreEvents = () => {
-    if (pagination.hasMore) {
-      setPagination((prev) => ({
-        ...prev,
-        offset: prev.offset + prev.limit,
-      }));
-      refetch();
-    }
+    if (!hasMore || loading) return;
+
+    const newOffset = pagination.offset + pagination.limit;
+    setPagination((prev) => ({ ...prev, offset: newOffset }));
+    loadEvents(pagination.limit, newOffset);
   };
 
   useEffect(() => {
+    loadEvents(pagination.limit, 0);
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      refetch();
+      loadEvents(pagination.limit, 0);
     });
     return unsubscribe;
   }, [navigation]);
@@ -79,7 +81,9 @@ export default function EventsScreen() {
           data={events}
           onEndReached={loadMoreEvents}
           onEndReachedThreshold={0.5}
-          ListFooterComponent={pagination.hasMore ? <ActivityIndicator size="small" /> : null}
+          ListFooterComponent={
+            loading && pagination.offset > 0 ? <ActivityIndicator size="small" /> : null
+          }
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <Swipeable renderRightActions={() => renderRightActions(item.id)}>

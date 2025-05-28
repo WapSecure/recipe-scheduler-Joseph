@@ -109,10 +109,18 @@ export const registerDeviceToken = async (userId: string, pushToken: string) => 
   }
 };
 
-export const getEvents = async (userId: string) => {
+export const getEvents = async (userId: string, limit: number = 10, offset: number = 0) => {
   try {
-    const response = await api.get<RecipeEvent[]>('/events', {
-      params: { userId },
+    const response = await api.get<{
+      data: RecipeEvent[];
+      pagination: {
+        limit: number;
+        offset: number;
+        total: number;
+        hasMore: boolean;
+      };
+    }>('/events', {
+      params: { userId, limit, offset },
     });
     return response.data;
   } catch (error) {
