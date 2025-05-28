@@ -108,7 +108,7 @@ export const getEvents = async (req: Request, res: Response) => {
       : 'default-user';
     
     // Pagination parameters with defaults
-    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 8;
     const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
     
     const events = await eventService.getEventsByUser(userId, limit, offset);

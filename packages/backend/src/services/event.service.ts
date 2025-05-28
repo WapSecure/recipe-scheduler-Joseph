@@ -25,7 +25,7 @@ export class EventService implements IEventService {
   }
 
 
-  async getEventsByUser(userId: string, limit: number = 10, offset: number = 0): Promise<Event[]> {
+  async getEventsByUser(userId: string, limit: number = 8, offset: number = 0): Promise<Event[]> {
     return getEventRepository().getEventsByUser(userId, limit, offset);
   }
 
