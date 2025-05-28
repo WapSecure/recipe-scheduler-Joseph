@@ -1,4 +1,4 @@
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
 import { Text, View } from '@/components/Themed';
@@ -21,15 +21,13 @@ type RootStackParamList = {
 
 export default function EventsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { events, loading, error, deleteEvent, loadEvents, hasMore } = useEvents();
 
   const [pagination, setPagination] = useState({
     limit: 10,
     offset: 0,
-    hasMore: true,
   });
 
-  const router = useRouter();
+  const { events, loading, error, deleteEvent, loadEvents, hasMore } = useEvents();
 
   const loadMoreEvents = () => {
     if (!hasMore || loading) return;
