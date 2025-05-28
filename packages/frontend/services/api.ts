@@ -20,7 +20,6 @@ const api = axios.create({
   baseURL: getApiBaseUrl(),
   timeout: 15000,
   headers: {
-    // Ngrok free tier requires this header
     'ngrok-skip-browser-warning': 'true',
   },
 });
@@ -35,6 +34,18 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     console.log('Response from:', response.config.url);
+    // Handle paginated responses
+    if (
+      response.config.url?.includes('/events') &&
+      response.config.method === 'get' &&
+      response.data?.data
+    ) {
+      return {
+        ...response,
+        data: response.data.data,
+        pagination: response.data.pagination,
+      };
+    }
     return response;
   },
   (error) => {
@@ -88,7 +99,6 @@ api.interceptors.response.use(
   }
 );
 
-// API methods with enhanced error handling
 export const registerDeviceToken = async (userId: string, pushToken: string) => {
   try {
     const response = await api.post('/devices', { userId, pushToken });

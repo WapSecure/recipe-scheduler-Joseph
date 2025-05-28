@@ -1,15 +1,29 @@
-import { Stack } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { Stack, useRouter } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { useLoadFonts } from '@/components/FontLoader';
 import { ThemeProvider } from '@/components/Themed';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { setupNotificationChannel } from '@/utils/notifications';
+import { useEffect } from 'react';
 
 
 export default function RootLayout() {
   setupNotificationChannel();
   const { fontsLoaded, fontError } = useLoadFonts();
+  const router = useRouter();
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const url = response.notification.request.content.data?.url;
+      if (url && typeof url === 'string') {
+        router.push(url as any);
+      }
+    });
+  
+    return () => subscription.remove();
+  }, []);
 
   if (!fontsLoaded && !fontError) {
     return (

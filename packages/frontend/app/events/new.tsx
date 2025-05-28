@@ -6,46 +6,47 @@ import { useEvents } from '@/services/events';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button, TextInput } from 'react-native-paper';
 import { ErrorHandler } from '@/components/ErrorHandler';
+import { DateTimePickerModal } from '@/components/DateTimePickerModal';
 
 export default function NewEventScreen() {
   const [title, setTitle] = useState('');
   const [eventTime, setEventTime] = useState(new Date());
   const { createEvent, error } = useEvents();
+  const [showPicker, setShowPicker] = useState(false);
+
   const router = useRouter();
 
   const handleCreate = async () => {
     try {
       if (new Date(eventTime) <= new Date()) {
-        Alert.alert(
-          'Invalid Date',
-          'Please select a future date and time for your event',
-          [{ text: 'OK' }]
-        );
+        Alert.alert('Invalid Date', 'Please select a future date and time for your event', [
+          { text: 'OK' },
+        ]);
         return;
       }
-  
+
       const payload = {
         title,
         eventTime: eventTime.toISOString(),
-        userId: 'test-user'
+        userId: 'test-user',
       };
       await createEvent(payload);
       router.replace('/events');
     } catch (error) {
-      Alert.alert(
-        'Error',
-        error instanceof Error ? error.message : 'Failed to create event',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create event', [
+        { text: 'OK' },
+      ]);
     }
   };
 
   return (
     <>
-      <Stack.Screen options={{ 
-        title: 'New Event',
-        headerBackTitle: 'Back',
-      }} />
+      <Stack.Screen
+        options={{
+          title: 'New Event',
+          headerBackTitle: 'Back',
+        }}
+      />
       <View style={styles.container}>
         <ErrorHandler error={error} />
         <TextInput
@@ -55,8 +56,8 @@ export default function NewEventScreen() {
           style={styles.input}
           mode="outlined"
         />
-        
-        <DateTimePicker
+
+        {/* <DateTimePicker
           value={eventTime}
           mode="datetime"
           display="default"
@@ -65,11 +66,22 @@ export default function NewEventScreen() {
               setEventTime(date);
             }
           }}
+        /> */}
+
+        <Button mode="outlined" onPress={() => setShowPicker(true)} style={styles.button}>
+          {new Date(eventTime).toLocaleString()}
+        </Button>
+
+        <DateTimePickerModal
+          visible={showPicker}
+          value={eventTime}
+          onChange={(date) => setEventTime(date)}
+          onClose={() => setShowPicker(false)}
         />
 
-        <Button 
-          mode="contained" 
-          onPress={handleCreate} 
+        <Button
+          mode="contained"
+          onPress={handleCreate}
           style={styles.button}
           disabled={!title.trim()}
         >

@@ -7,16 +7,11 @@ import { useEffect, useState } from 'react';
 import { ErrorHandler } from '@/components/ErrorHandler';
 import { registerForPushNotifications } from '@/services/notifications';
 import { Loading } from '@/components/Loading';
-import { Button } from 'react-native-paper'; 
+import { Button } from 'react-native-paper';
 
 export default function NotificationsScreen() {
-  const { 
-    notifications, 
-    loading, 
-    error,
-    clearError 
-  } = useNotifications();
-  
+  const { notifications, loading, error, clearError } = useNotifications();
+
   const { isConnected } = useNetInfo();
   const [permissionStatus, setPermissionStatus] = useState<Notifications.PermissionStatus>();
 
@@ -25,7 +20,7 @@ export default function NotificationsScreen() {
       const { status } = await Notifications.getPermissionsAsync();
       setPermissionStatus(status);
     };
-    
+
     checkPermissions();
   }, []);
 
@@ -33,17 +28,14 @@ export default function NotificationsScreen() {
     try {
       const { status } = await Notifications.requestPermissionsAsync();
       setPermissionStatus(status);
-      
+
       if (status === 'granted') {
         const token = await registerForPushNotifications('test-user');
         console.log('Notification token after enabling:', token);
       }
     } catch (err) {
       console.error('Error enabling notifications:', err);
-      Alert.alert(
-        'Permission Error',
-        'Failed to enable notifications. Please try again.'
-      );
+      Alert.alert('Permission Error', 'Failed to enable notifications. Please try again.');
     }
   };
 
@@ -56,7 +48,7 @@ export default function NotificationsScreen() {
       <View style={styles.container}>
         <ErrorHandler error={error} onDismiss={clearError} />
         {permissionStatus !== 'granted' && (
-          <Button 
+          <Button
             onPress={handleEnableNotifications}
             mode="contained"
             style={styles.permissionButton}
@@ -70,16 +62,14 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>
-        {isConnected ? 'Your Notifications' : 'Offline Mode'}
-      </Text>
+      <Text style={styles.title}>{isConnected ? 'Your Notifications' : 'Offline Mode'}</Text>
 
       {permissionStatus !== 'granted' && (
         <View style={styles.permissionBanner}>
           <Text style={styles.permissionText}>
             Notifications are disabled. Enable them to receive reminders.
           </Text>
-          <Button 
+          <Button
             onPress={handleEnableNotifications}
             mode="contained"
             style={styles.permissionButton}
@@ -100,9 +90,8 @@ export default function NotificationsScreen() {
           <View style={styles.notificationItem}>
             <Text style={styles.notificationTitle}>{item.title}</Text>
             <Text>{item.body}</Text>
-            <Text style={styles.notificationTime}>
-              {new Date(item.timestamp).toLocaleString()}
-            </Text>
+            {item.data?.url && <Text style={styles.notificationLink}>Event: {item.data.url}</Text>}
+            <Text style={styles.notificationTime}>{new Date(item.timestamp).toLocaleString()}</Text>
           </View>
         )}
       />
@@ -154,4 +143,10 @@ const styles = StyleSheet.create({
   permissionButton: {
     alignSelf: 'flex-start',
   },
+
+  notificationLink: {
+    fontSize: 12,
+    color: '#2f95dc',
+    marginTop: 4,
+  }
 });

@@ -2,13 +2,17 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { registerDeviceToken } from './api';
-import { useEffect, useState } from 'react';
-import { Platform, Alert } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 
 interface AppNotification {
   title: string;
   body: string;
   timestamp: string;
+  data?: {
+    url?: string;
+    [key: string]: any;
+  };
 }
 
 export async function registerForPushNotifications(userId: string) {
@@ -18,7 +22,6 @@ export async function registerForPushNotifications(userId: string) {
       return null;
     }
 
-    // Ensure notification channel is set up (Android)
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
         name: 'default',
@@ -28,32 +31,26 @@ export async function registerForPushNotifications(userId: string) {
       });
     }
 
-    // Get projectId - handle cases where it might be missing
     const projectId = Constants.expoConfig?.extra?.projectId;
     if (!projectId) {
       console.warn('Project ID not found in app config - using fallback');
-      // You can use a fallback project ID here if needed
       throw new Error('Notification configuration incomplete');
     }
 
-    // Check current permissions
     let { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
-    // Request permissions if not granted
     if (existingStatus !== 'granted') {
       console.log('Requesting notification permissions...');
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
 
-    // Handle denied permissions
     if (finalStatus !== 'granted') {
       console.log('Notification permission denied');
       return null;
     }
 
-    // Get push token
     console.log('Getting push token...');
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: Constants.expoConfig?.extra?.projectId,
@@ -70,7 +67,6 @@ export async function registerForPushNotifications(userId: string) {
       return tokenData.data;
     } catch (registrationError) {
       console.error('Failed to register token with backend:', registrationError);
-      // Still return the token even if backend registration fails
       return tokenData.data;
     }
   } catch (error) {
@@ -79,21 +75,31 @@ export async function registerForPushNotifications(userId: string) {
   }
 }
 
-export async function schedulePushNotification(title: string, body: string, triggerDate: Date) {
+export async function schedulePushNotification(
+  title: string,
+  body: string,
+  triggerDate: Date,
+  eventId?: string
+): Promise<string> {
   try {
-    await Notifications.scheduleNotificationAsync({
+    const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title,
         body,
         sound: 'default',
+        data: {
+          url: eventId ? `/events/${eventId}` : '/events',
+        },
       },
       trigger: {
         type: 'date',
         date: triggerDate,
       } as Notifications.NotificationTriggerInput,
     });
+    return notificationId;
   } catch (error) {
     console.error('Failed to schedule notification:', error);
+    throw error;
   }
 }
 
@@ -102,28 +108,40 @@ export const useNotifications = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const addNotification = (notification: { title: string; body: string }) => {
-    try {
+  const addNotification = useCallback(
+    (notification: { title?: string | null; body?: string | null; data?: any }) => {
       setNotifications((prev) => [
         {
-          title: notification.title,
-          body: notification.body,
+          title: notification.title || 'Reminder',
+          body: notification.body || '',
           timestamp: new Date().toISOString(),
+          data: notification.data,
         },
         ...prev,
       ]);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to add notification'));
-    }
-  };
+    },
+    []
+  );
 
   useEffect(() => {
     const setupNotifications = async () => {
       try {
+        // Load initial notifications
+        const presented = await Notifications.getPresentedNotificationsAsync();
+        const initialNotifications = presented.map((n) => ({
+          title: n.request.content.title || 'Reminder',
+          body: n.request.content.body || '',
+          timestamp: new Date().toISOString(),
+          data: n.request.content.data,
+        }));
+        setNotifications(initialNotifications);
+
+        // Setup listener for new notifications
         const subscription = Notifications.addNotificationReceivedListener((notification) => {
           addNotification({
-            title: notification.request.content.title || 'Reminder',
-            body: notification.request.content.body || '',
+            title: notification.request.content.title,
+            body: notification.request.content.body,
+            data: notification.request.content.data,
           });
         });
 
@@ -146,17 +164,13 @@ export const useNotifications = () => {
       }
     };
 
-    const cleanup = setupNotifications();
-    return () => {
-      cleanup.then((fn) => fn?.()).catch(console.error);
-    };
-  }, []);
+    setupNotifications();
+  }, [addNotification]);
 
   const clearError = () => setError(null);
 
   return {
     notifications,
-    addNotification,
     loading,
     error,
     clearError,

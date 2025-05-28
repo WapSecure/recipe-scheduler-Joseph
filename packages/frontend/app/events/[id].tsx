@@ -6,6 +6,7 @@ import { useEvents } from '@/services/events';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button, TextInput } from 'react-native-paper';
 import { ErrorHandler } from '@/components/ErrorHandler';
+import { DateTimePickerModal } from '@/components/DateTimePickerModal';
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -16,6 +17,8 @@ export default function EventDetailScreen() {
   const [title, setTitle] = useState('');
   const [eventTime, setEventTime] = useState(new Date());
   const [initialData, setInitialData] = useState({ title: '', eventTime: new Date() });
+  const [showPicker, setShowPicker] = useState(false);
+
 
   useEffect(() => {
     if (event) {
@@ -33,27 +36,23 @@ export default function EventDetailScreen() {
   const hasChanges =
     title !== initialData.title || eventTime.getTime() !== initialData.eventTime.getTime();
 
-    const handleSave = async () => {
-      try {
-        if (new Date(eventTime) <= new Date()) {
-          Alert.alert(
-            'Invalid Date',
-            'Please select a future date and time for your event',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
-    
-        await updateEvent(event.id, { title, eventTime: eventTime.toISOString() });
-        router.back();
-      } catch (error) {
-        Alert.alert(
-          'Error',
-          error instanceof Error ? error.message : 'Failed to update event',
-          [{ text: 'OK' }]
-        );
+  const handleSave = async () => {
+    try {
+      if (new Date(eventTime) <= new Date()) {
+        Alert.alert('Invalid Date', 'Please select a future date and time for your event', [
+          { text: 'OK' },
+        ]);
+        return;
       }
-    };
+
+      await updateEvent(event.id, { title, eventTime: eventTime.toISOString() });
+      router.back();
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to update event', [
+        { text: 'OK' },
+      ]);
+    }
+  };
 
   const handleDelete = () => {
     Alert.alert('Delete Event', 'Are you sure you want to delete this event?', [
@@ -90,7 +89,7 @@ export default function EventDetailScreen() {
           mode="outlined"
         />
 
-        <DateTimePicker
+        {/* <DateTimePicker
           value={eventTime}
           mode="datetime"
           display="default"
@@ -99,6 +98,17 @@ export default function EventDetailScreen() {
               setEventTime(date);
             }
           }}
+        /> */}
+
+        <Button mode="outlined" onPress={() => setShowPicker(true)} style={styles.button}>
+          {new Date(eventTime).toLocaleString()}
+        </Button>
+
+        <DateTimePickerModal
+          visible={showPicker}
+          value={eventTime}
+          onChange={(date) => setEventTime(date)}
+          onClose={() => setShowPicker(false)}
         />
 
         <Button mode="contained" onPress={handleSave} style={styles.button} disabled={!hasChanges}>

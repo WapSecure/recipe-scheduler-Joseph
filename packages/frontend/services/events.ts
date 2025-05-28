@@ -37,7 +37,6 @@ export const useEvents = () => {
   }, []);
 
   const createEvent = async (event: Omit<RecipeEvent, 'id' | 'createdAt'>) => {
-    // Declare tempId outside the try-catch block
     const tempId = Date.now().toString(); // Temporary ID for optimistic update
     
     try {
@@ -50,16 +49,13 @@ export const useEvents = () => {
       
       setEvents(prev => [...prev, optimisticEvent]);
       
-      // Actual API call
       const newEvent = await createEventApi({ ...event, userId: TEST_USER_ID });
       
-      // Replace optimistic update with real data
       setEvents(prev => prev.map(e => e.id === tempId ? newEvent : e));
       
       await scheduleReminder(newEvent);
       return newEvent;
     } catch (err) {
-      // Rollback on error
       setEvents(prev => prev.filter(e => e.id !== tempId));
       throw err instanceof Error ? err : new Error('Failed to create event');
     }
@@ -89,11 +85,16 @@ export const useEvents = () => {
     const reminderTime = new Date(event.eventTime);
     reminderTime.setMinutes(reminderTime.getMinutes() - 15);
     
-    await schedulePushNotification(
-      `Reminder: ${event.title}`,
-      `Starts at ${new Date(event.eventTime).toLocaleString()}`,
-      reminderTime
-    );
+    try {
+      await schedulePushNotification(
+        `Reminder: ${event.title}`,
+        `Starts at ${new Date(event.eventTime).toLocaleString()}`,
+        reminderTime,
+        event.id
+      );
+    } catch (error) {
+      console.error('Failed to schedule reminder:', error);
+    }
   };
 
   const refetch = () => {

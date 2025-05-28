@@ -1,12 +1,26 @@
-import { Tabs } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { Tabs, useRouter } from 'expo-router';
 import { FontAwesome, MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '@/components/Themed';
 import { setupNotificationChannel } from '@/utils/notifications';
+import { useEffect } from 'react';
 
 
 export default function TabLayout() {
   setupNotificationChannel();
   const { theme } = useTheme();
+  const router = useRouter();
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const url = response.notification.request.content.data?.url;
+      if (url && typeof url === 'string') {
+        router.push(url as any);
+      }
+    });
+  
+    return () => subscription.remove();
+  }, []);
 
   return (
     <Tabs screenOptions={{ 
