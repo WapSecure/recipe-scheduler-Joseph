@@ -14,7 +14,16 @@ const server = http.createServer(app);
 
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://7d8b-197-210-29-130.ngrok-free.app', // Your Ngrok URL
+    'exp://*.ngrok-free.app', // Allow all Expo apps using ngrok
+    'http://localhost:19006' // Expo dev server
+  ],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 app.use(bodyParser.json());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -23,6 +32,14 @@ app.use(injectServices);
 
 // Routes
 app.use('/api', router);
+
+app.use((req, res, next) => {
+  // Handle ngrok headers
+  res.setHeader('ngrok-skip-browser-warning', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  next();
+});
 
 // Error handling (should be last)
 app.use(errorHandler);

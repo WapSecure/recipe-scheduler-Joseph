@@ -44,7 +44,6 @@ function getErrorMessage(error: unknown): string {
 
 export const saveDeviceToken = async (req: Request, res: Response) => {
     try {
-      // this will remove direct service initialization and use the injected one
       if (!req.services) throw new Error('Services not initialized');
       
       const { deviceService } = req.services;

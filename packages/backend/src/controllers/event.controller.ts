@@ -47,15 +47,31 @@ export const createEvent = async (req: CustomRequest, res: Response) => {
       userId: req.body.userId || 'default-user',
     });
 
+    const eventDate = new Date(validatedData.eventTime);
+    if (eventDate <= new Date()) {
+      return res.status(400).json({ 
+        error: 'Event time must be in the future' 
+      });
+    }
+
     const event = await eventService.createEvent(validatedData);
     res.status(201).json(event);
   } catch (error) {
     if (isZodError(error)) {
+      const errorMessage = error.errors.map(e => e.message).join(', ');
       return res.status(400).json({ 
-        error: error.errors.map(e => e.message).join(', ')
+        error: errorMessage.includes('must be in the future') 
+          ? 'Event time must be in the future'
+          : errorMessage
       });
     }
-    res.status(400).json({ error: getErrorMessage(error) });
+    res.status(400).json({ 
+      error: error instanceof Error 
+        ? error.message.includes('must be in the future')
+          ? 'Event time must be in the future'
+          : error.message
+        : 'Failed to create event'
+    });
   }
 };
 
@@ -91,8 +107,21 @@ export const getEvents = async (req: Request, res: Response) => {
       ? req.query.userId 
       : 'default-user';
     
-    const events = await eventService.getEventsByUser(userId);
-    res.json(events);
+    // Pagination parameters with defaults
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+    const offset = req.query.offset ? parseInt(req.query.offset as string) : 0;
+    
+    const events = await eventService.getEventsByUser(userId, limit, offset);
+    
+    res.json({
+      data: events,
+      pagination: {
+        limit,
+        offset,
+        total: events.length,
+        hasMore: events.length === limit
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: getErrorMessage(error) });
   }
@@ -149,6 +178,15 @@ export const updateEvent = async (req: Request, res: Response) => {
     const { id } = eventIdSchema.parse(req.params);
     const updates = eventSchema.partial().parse(req.body);
     
+    if (updates.eventTime) {
+      const eventDate = new Date(updates.eventTime);
+      if (eventDate <= new Date()) {
+        return res.status(400).json({ 
+          error: 'Event time must be in the future' 
+        });
+      }
+    }
+    
     const updatedEvent = await eventService.updateEvent(id, updates);
     if (!updatedEvent) {
       return res.status(404).json({ error: 'Event not found' });
@@ -157,11 +195,20 @@ export const updateEvent = async (req: Request, res: Response) => {
     res.json(updatedEvent);
   } catch (error) {
     if (isZodError(error)) {
+      const errorMessage = error.errors.map(e => e.message).join(', ');
       return res.status(400).json({ 
-        error: error.errors.map(e => e.message).join(', ')
+        error: errorMessage.includes('must be in the future') 
+          ? 'Event time must be in the future'
+          : errorMessage
       });
     }
-    res.status(400).json({ error: getErrorMessage(error) });
+    res.status(400).json({ 
+      error: error instanceof Error 
+        ? error.message.includes('must be in the future')
+          ? 'Event time must be in the future'
+          : error.message
+        : 'Failed to update event'
+    });
   }
 };
 

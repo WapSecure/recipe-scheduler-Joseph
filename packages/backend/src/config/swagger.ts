@@ -12,6 +12,10 @@ const swaggerDefinition: SwaggerDefinition = {
       url: 'http://localhost:3000/api',
       description: 'Development server',
     },
+    {
+      url: 'https://7d8b-197-210-29-130.ngrok-free.app/api',
+      description: 'Ngrok tunnel',
+    },
   ],
   components: {
     securitySchemes: {
