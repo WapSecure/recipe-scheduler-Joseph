@@ -82,6 +82,14 @@ export async function schedulePushNotification(
   eventId?: string
 ): Promise<string> {
   try {
+    const now = new Date();
+    const minFutureTime = new Date(now.getTime() + 60 * 1000);
+
+    if (triggerDate <= minFutureTime) {
+      console.warn('Cannot schedule notification for past or immediate future time');
+      return '';
+    }
+
     const notificationId = await Notifications.scheduleNotificationAsync({
       content: {
         title,
@@ -99,10 +107,9 @@ export async function schedulePushNotification(
     return notificationId;
   } catch (error) {
     console.error('Failed to schedule notification:', error);
-    throw error;
+    return '';
   }
 }
-
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);

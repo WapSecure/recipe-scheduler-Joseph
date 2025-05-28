@@ -11,7 +11,7 @@ const getApiBaseUrl = () => {
   // For development (emulator/local device)
   return Platform.select({
     android: 'http://10.0.2.2:3000/api',
-    ios: 'http://localhost:3000/api',
+    ios: 'https://7d8b-197-210-29-130.ngrok-free.app/api',
     default: 'http://localhost:3000/api',
   });
 };
@@ -34,18 +34,6 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => {
     console.log('Response from:', response.config.url);
-    // Handle paginated responses
-    if (
-      response.config.url?.includes('/events') &&
-      response.config.method === 'get' &&
-      response.data?.data
-    ) {
-      return {
-        ...response,
-        data: response.data.data,
-        pagination: response.data.pagination,
-      };
-    }
     return response;
   },
   (error) => {
@@ -109,9 +97,9 @@ export const registerDeviceToken = async (userId: string, pushToken: string) => 
   }
 };
 
-export const getEvents = async (userId: string, limit: number = 10, offset: number = 0) => {
+export const getEvents = async (userId: string, limit = 8, offset = 0) => {
   try {
-    const response = await api.get<{
+    const res = await api.get<{
       data: RecipeEvent[];
       pagination: {
         limit: number;
@@ -119,10 +107,9 @@ export const getEvents = async (userId: string, limit: number = 10, offset: numb
         total: number;
         hasMore: boolean;
       };
-    }>('/events', {
-      params: { userId, limit, offset },
-    });
-    return response.data;
+    }>('/events', { params: { userId, limit, offset } });
+
+    return res.data;
   } catch (error) {
     console.error('Failed to fetch events:', error);
     throw error;

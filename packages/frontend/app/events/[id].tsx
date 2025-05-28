@@ -89,17 +89,6 @@ export default function EventDetailScreen() {
           mode="outlined"
         />
 
-        {/* <DateTimePicker
-          value={eventTime}
-          mode="datetime"
-          display="default"
-          onChange={(_, date) => {
-            if (date) {
-              setEventTime(date);
-            }
-          }}
-        /> */}
-
         <Button mode="outlined" onPress={() => setShowPicker(true)} style={styles.button}>
           {new Date(eventTime).toLocaleString()}
         </Button>

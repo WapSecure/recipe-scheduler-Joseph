@@ -3,39 +3,38 @@ import { StyleSheet, Alert } from 'react-native';
 import { View } from '@/components/Themed';
 import { Stack, useRouter } from 'expo-router';
 import { useEvents } from '@/services/events';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Button, TextInput } from 'react-native-paper';
 import { ErrorHandler } from '@/components/ErrorHandler';
 import { DateTimePickerModal } from '@/components/DateTimePickerModal';
 
 export default function NewEventScreen() {
-  const [title, setTitle] = useState('');
-  const [eventTime, setEventTime] = useState(new Date());
+  const [title, setTitle] = useState<string>('');
+  const [eventTime, setEventTime] = useState<Date>(new Date());
   const { createEvent, error } = useEvents();
-  const [showPicker, setShowPicker] = useState(false);
+  const [showPicker, setShowPicker] = useState<boolean>(false);
 
   const router = useRouter();
 
   const handleCreate = async () => {
     try {
-      if (new Date(eventTime) <= new Date()) {
-        Alert.alert('Invalid Date', 'Please select a future date and time for your event', [
-          { text: 'OK' },
-        ]);
+      if (!title.trim()) {
+        Alert.alert('Error', 'Title is required');
         return;
       }
 
-      const payload = {
+      if (new Date(eventTime) <= new Date()) {
+        Alert.alert('Invalid Date', 'Please select a future date and time');
+        return;
+      }
+
+      await createEvent({
         title,
         eventTime: eventTime.toISOString(),
         userId: 'test-user',
-      };
-      await createEvent(payload);
+      });
       router.replace('/events');
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create event', [
-        { text: 'OK' },
-      ]);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create event');
     }
   };
 
@@ -57,19 +56,8 @@ export default function NewEventScreen() {
           mode="outlined"
         />
 
-        {/* <DateTimePicker
-          value={eventTime}
-          mode="datetime"
-          display="default"
-          onChange={(_, date) => {
-            if (date) {
-              setEventTime(date);
-            }
-          }}
-        /> */}
-
-        <Button mode="outlined" onPress={() => setShowPicker(true)} style={styles.button}>
-          {new Date(eventTime).toLocaleString()}
+        <Button mode="outlined" onPress={() => setShowPicker(true)} style={styles.input}>
+          {eventTime.toLocaleString()}
         </Button>
 
         <DateTimePickerModal

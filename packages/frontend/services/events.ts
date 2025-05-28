@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { 
+import {
   getEvents as getEventsApi,
   createEvent as createEventApi,
   updateEvent as updateEventApi,
-  deleteEvent as deleteEventApi 
+  deleteEvent as deleteEventApi,
 } from './api';
 import { schedulePushNotification } from './notifications';
 import { Event as RecipeEvent } from '../../backend/src/models/interfaces';
@@ -16,22 +16,15 @@ export const useEvents = () => {
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
-  const loadEvents = async (limit: number = 10, offset: number = 0) => {
+  const loadEvents = async (limit: number = 8, offset: number = 0) => {
     try {
       setLoading(true);
-      console.log('Making API call with:', { limit, offset });
       const response = await getEventsApi(TEST_USER_ID, limit, offset);
-      console.log('API response:', response);
-      
-      if (!response) {
-        throw new Error('Empty response from server');
-      }
-  
-      setEvents(prev => offset === 0 ? response.data : [...prev, ...response.data]);
+
+      setEvents((prev) => (offset === 0 ? response.data : [...prev, ...response.data]));
       setHasMore(response.pagination?.hasMore ?? false);
       setError(null);
     } catch (err) {
-      console.error('Error in loadEvents:', err); 
       setError(err instanceof Error ? err : new Error('Failed to load events'));
       setHasMore(false);
     } finally {
@@ -44,31 +37,30 @@ export const useEvents = () => {
   }, [events]);
 
   useEffect(() => {
-    loadEvents();
+    loadEvents(8, 0);
   }, []);
-
 
   const createEvent = async (event: Omit<RecipeEvent, 'id' | 'createdAt'>) => {
     const tempId = Date.now().toString(); // Temporary ID for optimistic update
-    
+
     try {
       const optimisticEvent = {
         ...event,
         id: tempId,
         createdAt: new Date().toISOString(),
-        userId: TEST_USER_ID
+        userId: TEST_USER_ID,
       };
-      
-      setEvents(prev => [...prev, optimisticEvent]);
-      
+
+      setEvents((prev) => [...prev, optimisticEvent]);
+
       const newEvent = await createEventApi({ ...event, userId: TEST_USER_ID });
-      
-      setEvents(prev => prev.map(e => e.id === tempId ? newEvent : e));
-      
+
+      setEvents((prev) => prev.map((e) => (e.id === tempId ? newEvent : e)));
+
       await scheduleReminder(newEvent);
       return newEvent;
     } catch (err) {
-      setEvents(prev => prev.filter(e => e.id !== tempId));
+      setEvents((prev) => prev.filter((e) => e.id !== tempId));
       throw err instanceof Error ? err : new Error('Failed to create event');
     }
   };
@@ -76,7 +68,7 @@ export const useEvents = () => {
   const updateEvent = async (id: string, updates: Partial<RecipeEvent>) => {
     try {
       const updatedEvent = await updateEventApi(id, updates);
-      setEvents(prev => prev.map(e => e.id === id ? updatedEvent : e));
+      setEvents((prev) => prev.map((e) => (e.id === id ? updatedEvent : e)));
       await scheduleReminder(updatedEvent);
       return updatedEvent;
     } catch (err) {
@@ -87,7 +79,7 @@ export const useEvents = () => {
   const deleteEvent = async (id: string) => {
     try {
       await deleteEventApi(id);
-      setEvents(prev => prev.filter(e => e.id !== id));
+      setEvents((prev) => prev.filter((e) => e.id !== id));
     } catch (err) {
       throw err instanceof Error ? err : new Error('Failed to delete event');
     }
@@ -97,6 +89,12 @@ export const useEvents = () => {
     const reminderTime = new Date(event.eventTime);
     reminderTime.setMinutes(reminderTime.getMinutes() - 15);
     
+    const now = new Date();
+    if (reminderTime <= now) {
+      console.warn('Event time is too soon to schedule reminder');
+      return;
+    }
+  
     try {
       await schedulePushNotification(
         `Reminder: ${event.title}`,
@@ -110,18 +108,18 @@ export const useEvents = () => {
   };
 
   const refetch = () => {
-    loadEvents();
+    loadEvents(8, 0);
   };
 
-  return { 
-    events, 
-    loading, 
+  return {
+    events,
+    loading,
     error,
     hasMore,
-    loadEvents, 
-    createEvent, 
-    updateEvent, 
+    loadEvents,
+    createEvent,
+    updateEvent,
     deleteEvent,
-    refetch
+    refetch: () => loadEvents(8, 0),
   };
 };
