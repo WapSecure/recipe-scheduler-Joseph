@@ -19,12 +19,21 @@ export const useEvents = () => {
   const loadEvents = async (limit: number = 10, offset: number = 0) => {
     try {
       setLoading(true);
+      console.log('Making API call with:', { limit, offset });
       const response = await getEventsApi(TEST_USER_ID, limit, offset);
+      console.log('API response:', response);
+      
+      if (!response) {
+        throw new Error('Empty response from server');
+      }
+  
       setEvents(prev => offset === 0 ? response.data : [...prev, ...response.data]);
-      setHasMore(response.pagination.hasMore);
+      setHasMore(response.pagination?.hasMore ?? false);
       setError(null);
     } catch (err) {
+      console.error('Error in loadEvents:', err); 
       setError(err instanceof Error ? err : new Error('Failed to load events'));
+      setHasMore(false);
     } finally {
       setLoading(false);
     }

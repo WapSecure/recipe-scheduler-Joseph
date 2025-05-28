@@ -12,6 +12,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ErrorHandler } from '@/components/ErrorHandler';
 import { useEffect, useState } from 'react';
+import { Button } from 'react-native-paper';
 
 type RootStackParamList = {
   'events/new': undefined;
@@ -20,6 +21,7 @@ type RootStackParamList = {
 };
 
 export default function EventsScreen() {
+  console.log('Rendering EventsScreen');
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [pagination, setPagination] = useState({
@@ -29,13 +31,41 @@ export default function EventsScreen() {
 
   const { events, loading, error, deleteEvent, loadEvents, hasMore } = useEvents();
 
+  console.log('Current state:', { loading, error, hasMore, events });
+
+  useEffect(() => {
+    console.log('Initial load');
+    loadEvents(pagination.limit, 0).catch((e) => {
+      console.error('Initial load failed:', e);
+    });
+  }, []);
+
   const loadMoreEvents = () => {
+    console.log('Attempting to load more');
     if (!hasMore || loading) return;
 
     const newOffset = pagination.offset + pagination.limit;
+    console.log('Loading more with offset:', newOffset);
     setPagination((prev) => ({ ...prev, offset: newOffset }));
-    loadEvents(pagination.limit, newOffset);
+    loadEvents(pagination.limit, newOffset).catch((e) => {
+      console.error('Load more failed:', e);
+    });
   };
+
+  if (loading && pagination.offset === 0) {
+    console.log('Showing loading state');
+    return <Loading />;
+  }
+
+  if (error) {
+    console.log('Showing error state');
+    return (
+      <View style={styles.container}>
+        <ErrorHandler error={error} />
+        <Button onPress={() => loadEvents(pagination.limit, 0)}>Retry</Button>
+      </View>
+    );
+  }
 
   useEffect(() => {
     loadEvents(pagination.limit, 0);
@@ -63,6 +93,15 @@ export default function EventsScreen() {
   );
 
   if (loading) return <Loading />;
+
+  if (events.length === 0 && !loading) {
+    return (
+      <View style={styles.container}>
+        <Text>No events found</Text>
+        <Button onPress={() => loadEvents(pagination.limit, 0)}>Refresh</Button>
+      </View>
+    );
+  }
 
   return (
     <>
